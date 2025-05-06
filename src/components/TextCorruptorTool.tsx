@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -101,9 +100,8 @@ const TextCorruptorTool: React.FC = () => {
       toast.info("Generating PDF...");
       
       const element = markedOutputRef.current;
-      const contentWidth = element.scrollWidth;
-      const contentHeight = element.scrollHeight;
       
+      // Create PDF with A4 dimensions
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -112,60 +110,56 @@ const TextCorruptorTool: React.FC = () => {
       
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10; // 10mm margins
-      const usableWidth = pageWidth - (margin * 2);
-      const usableHeight = pageHeight - (margin * 2);
+      const margin = 15; // 15mm margins
       
-      // Clone the element to manipulate it without affecting the visible one
-      const clonedElement = element.cloneNode(true) as HTMLElement;
-      clonedElement.style.width = `${usableWidth}mm`;
-      document.body.appendChild(clonedElement);
+      // Get the HTML content as text
+      const htmlContent = element.innerHTML;
       
-      // Measure content after setting width to PDF usable width
-      const scaledHeight = clonedElement.scrollHeight;
-      const pageCount = Math.ceil(scaledHeight / usableHeight);
+      // Clean up the HTML - remove unnecessary styling that might cause bloat
+      const cleanedHtml = htmlContent
+        .replace(/style="[^"]*"/g, '') // Remove inline styles
+        .replace(/class="[^"]*"/g, '') // Remove classes
+        .replace(/<br>\s*<br>/g, '<br>'); // Remove double line breaks
       
-      // Process each page
-      for (let i = 0; i < pageCount; i++) {
-        if (i > 0) {
-          pdf.addPage();
+      // Use the built-in HTML renderer from jsPDF
+      pdf.html(cleanedHtml, {
+        callback: function(pdf) {
+          // Remove empty pages by checking page count and content
+          const pageCount = pdf.internal.getNumberOfPages();
+          
+          // Check each page for content, starting from the end
+          for (let i = pageCount; i > 0; i--) {
+            pdf.setPage(i);
+            
+            // If this is not first page and appears to be empty (check for text or other elements)
+            const pageContent = pdf.internal.pages[i];
+            const hasContent = pageContent && pageContent.length > 100; // Basic heuristic
+            
+            if (i !== 1 && !hasContent) {
+              pdf.deletePage(i);
+            } else {
+              // Stop when we find a non-empty page
+              break;
+            }
+          }
+          
+          // Save with a smaller file size (compression)
+          pdf.save('corrupted-text.pdf');
+          toast.success("PDF downloaded successfully!");
+        },
+        x: margin,
+        y: margin,
+        width: pageWidth - (margin * 2), 
+        windowWidth: 1000, // Control rendering quality
+        autoPaging: true,
+        margin: [margin, margin, margin, margin],
+        html2canvas: {
+          scale: 0.75, // Lower scale for better performance and smaller file size
+          useCORS: true,
+          logging: false, // Disable logging to improve performance
+          imageTimeout: 5000 // Shorter timeout to prevent hanging
         }
-        
-        // Create a div that will show only the content for this page
-        const pageDiv = document.createElement('div');
-        pageDiv.style.position = 'absolute';
-        pageDiv.style.top = '0';
-        pageDiv.style.left = '0';
-        pageDiv.style.width = `${usableWidth}mm`;
-        pageDiv.style.height = `${usableHeight}mm`;
-        pageDiv.style.overflow = 'hidden';
-        
-        // Clone content for this page
-        const contentClone = clonedElement.cloneNode(true) as HTMLElement;
-        contentClone.style.position = 'absolute';
-        contentClone.style.top = `${-i * usableHeight}mm`;
-        pageDiv.appendChild(contentClone);
-        document.body.appendChild(pageDiv);
-        
-        // Convert this page to an image
-        const imgData = await toPng(pageDiv, {
-          backgroundColor: '#ffffff',
-          pixelRatio: 2,
-          quality: 1
-        });
-        
-        // Add the image to the PDF
-        pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, usableHeight);
-        
-        // Clean up
-        document.body.removeChild(pageDiv);
-      }
-      
-      // Final clean up
-      document.body.removeChild(clonedElement);
-      
-      pdf.save('corrupted-text.pdf');
-      toast.success("PDF downloaded successfully!");
+      });
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Failed to generate PDF");
