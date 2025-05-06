@@ -15,7 +15,11 @@ import parse from 'html-react-parser';
 
 const TextCorruptorTool: React.FC = () => {
   const [content, setContent] = useState<string>('');
-  const [corruptionPercentage, setCorruptionPercentage] = useState<number>(30);
+  const [corruptionSettings, setCorruptionSettings] = useState({
+    spelling: 30,
+    punctuation: 30,
+    missingText: 30
+  });
   const [plainOutput, setPlainOutput] = useState<string>('');
   const [markedOutput, setMarkedOutput] = useState<string>('');
   const plainOutputRef = useRef<HTMLDivElement>(null);
@@ -43,7 +47,7 @@ const TextCorruptorTool: React.FC = () => {
       return;
     }
 
-    const { plainVersion, markedVersion } = corruptText(content, corruptionPercentage);
+    const { plainVersion, markedVersion } = corruptText(content, corruptionSettings);
     setPlainOutput(plainVersion);
     setMarkedOutput(markedVersion);
     toast.success("Text successfully corrupted!");
@@ -61,12 +65,8 @@ const TextCorruptorTool: React.FC = () => {
       toast.info("Generating PDF...");
       
       const element = markedOutputRef.current;
-      const imgData = await toPng(element, { 
-        backgroundColor: '#ffffff',
-        pixelRatio: 2,
-        quality: 1,
-        skipAutoScale: true
-      });
+      const contentWidth = element.scrollWidth;
+      const contentHeight = element.scrollHeight;
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -74,10 +74,60 @@ const TextCorruptorTool: React.FC = () => {
         format: 'a4'
       });
       
-      const imgWidth = 210 - 20; // A4 width minus margins
-      const imgHeight = (element.offsetHeight * imgWidth) / element.offsetWidth;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10; // 10mm margins
+      const usableWidth = pageWidth - (margin * 2);
+      const usableHeight = pageHeight - (margin * 2);
       
-      pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, Math.min(imgHeight, 277)); // A4 height: 297mm - 20mm margins
+      // Clone the element to manipulate it without affecting the visible one
+      const clonedElement = element.cloneNode(true) as HTMLElement;
+      clonedElement.style.width = `${usableWidth}mm`;
+      document.body.appendChild(clonedElement);
+      
+      // Measure content after setting width to PDF usable width
+      const scaledHeight = clonedElement.scrollHeight;
+      const pageCount = Math.ceil(scaledHeight / usableHeight);
+      
+      // Process each page
+      for (let i = 0; i < pageCount; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        // Create a div that will show only the content for this page
+        const pageDiv = document.createElement('div');
+        pageDiv.style.position = 'absolute';
+        pageDiv.style.top = '0';
+        pageDiv.style.left = '0';
+        pageDiv.style.width = `${usableWidth}mm`;
+        pageDiv.style.height = `${usableHeight}mm`;
+        pageDiv.style.overflow = 'hidden';
+        
+        // Clone content for this page
+        const contentClone = clonedElement.cloneNode(true) as HTMLElement;
+        contentClone.style.position = 'absolute';
+        contentClone.style.top = `${-i * usableHeight}mm`;
+        pageDiv.appendChild(contentClone);
+        document.body.appendChild(pageDiv);
+        
+        // Convert this page to an image
+        const imgData = await toPng(pageDiv, {
+          backgroundColor: '#ffffff',
+          pixelRatio: 2,
+          quality: 1
+        });
+        
+        // Add the image to the PDF
+        pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, usableHeight);
+        
+        // Clean up
+        document.body.removeChild(pageDiv);
+      }
+      
+      // Final clean up
+      document.body.removeChild(clonedElement);
+      
       pdf.save('corrupted-text.pdf');
       toast.success("PDF downloaded successfully!");
     } catch (error) {
@@ -116,23 +166,65 @@ const TextCorruptorTool: React.FC = () => {
           />
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="corruptionSlider">Corruption Level: {corruptionPercentage}%</Label>
-            <div className="flex items-center text-sm text-amber-500">
-              <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-              <span>Higher values produce more errors</span>
+        <div className="grid gap-4">
+          <h3 className="text-lg font-medium">Corruption Settings</h3>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="spellingSlider">Spelling Errors: {corruptionSettings.spelling}%</Label>
+              <div className="flex items-center text-sm text-amber-500">
+                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                <span>Word misspellings</span>
+              </div>
             </div>
+            <Slider
+              id="spellingSlider"
+              defaultValue={[corruptionSettings.spelling]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(value) => setCorruptionSettings(prev => ({ ...prev, spelling: value[0] }))}
+              className="py-3"
+            />
           </div>
-          <Slider
-            id="corruptionSlider"
-            defaultValue={[corruptionPercentage]}
-            min={0}
-            max={100}
-            step={1}
-            onValueChange={(value) => setCorruptionPercentage(value[0])}
-            className="py-4"
-          />
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="punctuationSlider">Punctuation Errors: {corruptionSettings.punctuation}%</Label>
+              <div className="flex items-center text-sm text-amber-500">
+                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                <span>Incorrect or missing punctuation</span>
+              </div>
+            </div>
+            <Slider
+              id="punctuationSlider"
+              defaultValue={[corruptionSettings.punctuation]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(value) => setCorruptionSettings(prev => ({ ...prev, punctuation: value[0] }))}
+              className="py-3"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="missingTextSlider">Missing Text: {corruptionSettings.missingText}%</Label>
+              <div className="flex items-center text-sm text-amber-500">
+                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                <span>Words or sentences removal</span>
+              </div>
+            </div>
+            <Slider
+              id="missingTextSlider"
+              defaultValue={[corruptionSettings.missingText]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(value) => setCorruptionSettings(prev => ({ ...prev, missingText: value[0] }))}
+              className="py-3"
+            />
+          </div>
         </div>
 
         <Button 

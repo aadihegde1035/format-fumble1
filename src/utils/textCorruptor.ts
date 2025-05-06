@@ -71,10 +71,17 @@ export const parseHtml = (html: string) => {
   }));
 };
 
+// Interface for corruption settings
+interface CorruptionSettings {
+  spelling: number;
+  punctuation: number;
+  missingText: number;
+}
+
 // Function to corrupt text based on percentage
 export const corruptText = (
   content: string, 
-  corruptionPercentage: number
+  settings: CorruptionSettings
 ): { plainVersion: string; markedVersion: string } => {
   const parts = parseHtml(content);
   
@@ -100,17 +107,15 @@ export const corruptText = (
           return;
         }
         
-        // Check if we should corrupt this word (based on percentage)
-        const shouldCorrupt = Math.random() * 100 < corruptionPercentage;
+        // Determine type of corruption based on separate settings
+        const corruptionType = determineCorruptionType(settings);
         
-        if (!shouldCorrupt) {
+        // If no corruption, keep the word as is
+        if (corruptionType === -1) {
           plainResult += word;
           markedResult += word;
           return;
         }
-        
-        // Determine type of corruption
-        const corruptionType = Math.floor(Math.random() * 3);
         
         // Simple word with potential punctuation at end
         const matches = word.match(/^(\w+)([^\w]*)$/);
@@ -184,11 +189,11 @@ export const corruptText = (
     }
   });
 
-  // Random chance to remove entire sentences (only if corruption is high)
-  if (corruptionPercentage > 50) {
+  // Random chance to remove entire sentences (only if missing text percentage is high)
+  if (settings.missingText > 50) {
     const sentences = plainResult.split(/(?<=[.!?])\s+/);
     
-    if (sentences.length > 2) {
+    if (sentences.length > 2 && Math.random() * 100 < settings.missingText / 2) {
       const sentenceToRemove = 1 + Math.floor(Math.random() * (sentences.length - 1));
       
       // Create versions with a sentence removed
@@ -205,3 +210,34 @@ export const corruptText = (
 
   return { plainVersion: plainResult, markedVersion: markedResult };
 };
+
+// Helper function to determine which type of corruption to apply based on settings
+function determineCorruptionType(settings: CorruptionSettings): number {
+  // Roll for each type of corruption based on its percentage
+  const spellingRoll = Math.random() * 100;
+  const punctuationRoll = Math.random() * 100;
+  const missingTextRoll = Math.random() * 100;
+  
+  // Create an array of eligible corruption types
+  const eligibleTypes: number[] = [];
+  
+  if (spellingRoll < settings.spelling) {
+    eligibleTypes.push(0);
+  }
+  
+  if (punctuationRoll < settings.punctuation) {
+    eligibleTypes.push(1);
+  }
+  
+  if (missingTextRoll < settings.missingText) {
+    eligibleTypes.push(2);
+  }
+  
+  // If no corruption types are eligible, return -1 (no corruption)
+  if (eligibleTypes.length === 0) {
+    return -1;
+  }
+  
+  // Randomly select from eligible corruption types
+  return eligibleTypes[Math.floor(Math.random() * eligibleTypes.length)];
+}
