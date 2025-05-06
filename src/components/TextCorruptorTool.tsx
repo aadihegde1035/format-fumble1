@@ -7,21 +7,32 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, Download, AlertTriangle, Info } from 'lucide-react';
-import { corruptText } from '@/utils/textCorruptor';
+import { corruptText, CorruptionSettings } from '@/utils/textCorruptor';
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import parse from 'html-react-parser';
+import { Input } from '@/components/ui/input';
 
 const TextCorruptorTool: React.FC = () => {
   const [content, setContent] = useState<string>('');
-  const [corruptionSettings, setCorruptionSettings] = useState({
+  const [corruptionSettings, setCorruptionSettings] = useState<CorruptionSettings>({
     spelling: 30,
     punctuation: 30,
     missingText: 30
   });
+  
+  const [candidateName, setCandidateName] = useState<string>('');
+  const [assignmentName, setAssignmentName] = useState<string>('');
+  
   const [plainOutput, setPlainOutput] = useState<string>('');
   const [markedOutput, setMarkedOutput] = useState<string>('');
+  const [errorCounts, setErrorCounts] = useState({
+    spelling: 0,
+    punctuation: 0,
+    missingText: 0
+  });
+  
   const plainOutputRef = useRef<HTMLDivElement>(null);
   const markedOutputRef = useRef<HTMLDivElement>(null);
 
@@ -47,9 +58,34 @@ const TextCorruptorTool: React.FC = () => {
       return;
     }
 
-    const { plainVersion, markedVersion } = corruptText(content, corruptionSettings);
-    setPlainOutput(plainVersion);
-    setMarkedOutput(markedVersion);
+    const result = corruptText(content, corruptionSettings);
+    setPlainOutput(result.plainVersion);
+    
+    // Add the candidate name, assignment name, and error summary to the marked version
+    let headerContent = '';
+    if (candidateName || assignmentName) {
+      headerContent = `<div class="mb-4 p-3 bg-gray-100 rounded-md">`;
+      
+      if (candidateName) {
+        headerContent += `<div class="font-bold">Candidate: ${candidateName}</div>`;
+      }
+      
+      if (assignmentName) {
+        headerContent += `<div class="font-bold">Assignment: ${assignmentName}</div>`;
+      }
+      
+      headerContent += `<div class="mt-2 text-sm">
+        <div>Spelling Errors: ${result.errorCounts.spelling}</div>
+        <div>Punctuation Errors: ${result.errorCounts.punctuation}</div>
+        <div>Missing Text: ${result.errorCounts.missingText}</div>
+      </div>`;
+      
+      headerContent += `</div>`;
+    }
+    
+    setMarkedOutput(headerContent + result.markedVersion);
+    setErrorCounts(result.errorCounts);
+    
     toast.success("Text successfully corrupted!");
   };
 
@@ -146,6 +182,28 @@ const TextCorruptorTool: React.FC = () => {
       </header>
 
       <div className="grid gap-6">
+        {/* Candidate & Assignment Name Fields */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="candidateName">Candidate Name</Label>
+            <Input 
+              id="candidateName" 
+              value={candidateName}
+              onChange={(e) => setCandidateName(e.target.value)}
+              placeholder="Enter candidate name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assignmentName">Assignment Name</Label>
+            <Input 
+              id="assignmentName"
+              value={assignmentName}
+              onChange={(e) => setAssignmentName(e.target.value)}
+              placeholder="Enter assignment name"
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-1">
             <Label htmlFor="textInput">Input Text</Label>

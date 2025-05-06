@@ -1,3 +1,4 @@
+
 // Common misspellings for frequent English words
 const commonMisspellings: Record<string, string[]> = {
   "the": ["teh", "hte", "te", "tthe"],
@@ -31,6 +32,72 @@ const punctuationErrors: Record<string, string[]> = {
   ";": ["", ":", ",", "."],
   ":": ["", ";", "."],
   "'": ["", "`"],
+};
+
+// Function to create spelling errors with different types
+const createSpellingError = (word: string): string => {
+  if (word.length <= 2) return word; // Don't modify very short words
+  
+  // Choose error type: 0 = omission, 1 = insertion, 2 = substitution, 3 = transposition, 4 = common misspelling
+  const errorTypes = [];
+  
+  // Always check common misspellings first
+  const lowercaseWord = word.toLowerCase();
+  if (commonMisspellings[lowercaseWord]) {
+    errorTypes.push(4);
+  }
+  
+  // Add other error types if word is long enough
+  if (word.length > 3) {
+    errorTypes.push(0, 1, 2, 3);
+  } else if (word.length === 3) {
+    errorTypes.push(1, 2); // For 3-letter words, only do insertion or substitution
+  }
+  
+  // Select an error type
+  const errorType = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+  
+  // Apply the selected error type
+  switch (errorType) {
+    case 0: // Omission (leaving out letters)
+      const posToOmit = Math.floor(Math.random() * (word.length - 1)) + 1; // Don't omit first letter
+      return word.substring(0, posToOmit) + word.substring(posToOmit + 1);
+      
+    case 1: // Insertion (adding extra letters)
+      const posToInsert = Math.floor(Math.random() * word.length);
+      const extraChars = 'abcdefghijklmnoprstuvwxyz';
+      const charToInsert = extraChars[Math.floor(Math.random() * extraChars.length)];
+      return word.substring(0, posToInsert) + charToInsert + word.substring(posToInsert);
+      
+    case 2: // Substitution (replacing letters)
+      const posToSubstitute = Math.floor(Math.random() * word.length);
+      const replaceChars = 'abcdefghijklmnoprstuvwxyz';
+      let charToSubstitute = replaceChars[Math.floor(Math.random() * replaceChars.length)];
+      // Ensure we're not replacing with the same letter
+      while (charToSubstitute === word[posToSubstitute].toLowerCase()) {
+        charToSubstitute = replaceChars[Math.floor(Math.random() * replaceChars.length)];
+      }
+      return word.substring(0, posToSubstitute) + charToSubstitute + word.substring(posToSubstitute + 1);
+      
+    case 3: // Transposition (reversing order of letters)
+      if (word.length <= 3) return word; // Avoid for very short words
+      const posToTranspose = Math.floor(Math.random() * (word.length - 2)) + 1; // Avoid first letter
+      return word.substring(0, posToTranspose) + 
+             word[posToTranspose + 1] + 
+             word[posToTranspose] + 
+             word.substring(posToTranspose + 2);
+            
+    case 4: // Common misspelling
+      const misspellings = commonMisspellings[lowercaseWord];
+      const misspelled = misspellings[Math.floor(Math.random() * misspellings.length)];
+      // Preserve original capitalization
+      return word[0] === word[0].toUpperCase() 
+        ? misspelled.charAt(0).toUpperCase() + misspelled.slice(1)
+        : misspelled;
+      
+    default:
+      return word; // No change
+  }
 };
 
 // Split HTML content into text and non-text parts
@@ -72,21 +139,39 @@ export const parseHtml = (html: string) => {
 };
 
 // Interface for corruption settings
-interface CorruptionSettings {
+export interface CorruptionSettings {
   spelling: number;
   punctuation: number;
   missingText: number;
+}
+
+// Interface for corruption results
+export interface CorruptionResult {
+  plainVersion: string;
+  markedVersion: string;
+  errorCounts: {
+    spelling: number;
+    punctuation: number;
+    missingText: number;
+  }
 }
 
 // Function to corrupt text based on percentage
 export const corruptText = (
   content: string, 
   settings: CorruptionSettings
-): { plainVersion: string; markedVersion: string } => {
+): CorruptionResult => {
   const parts = parseHtml(content);
   
   let plainResult = "";
   let markedResult = "";
+  
+  // Track error counts
+  const errorCounts = {
+    spelling: 0,
+    punctuation: 0,
+    missingText: 0
+  };
 
   parts.forEach(part => {
     if (part.isTag) {
@@ -124,36 +209,15 @@ export const corruptText = (
         
         switch (corruptionType) {
           case 0: // Spelling error
-            if (commonMisspellings[wordOnly] && wordOnly.length > 2) {
-              const misspellings = commonMisspellings[wordOnly];
-              const misspelled = misspellings[Math.floor(Math.random() * misspellings.length)];
-              // Preserve original capitalization
-              const preserveCase = word[0] === word[0].toUpperCase() 
-                ? misspelled.charAt(0).toUpperCase() + misspelled.slice(1)
-                : misspelled;
+            if (wordOnly.length > 2) {
+              const misspelled = createSpellingError(matches ? matches[1] : word);
               
-              plainResult += preserveCase + punctuation;
-              markedResult += `<span class="spelling-error">${preserveCase}</span>${punctuation}`;
+              plainResult += misspelled + punctuation;
+              markedResult += `<span class="spelling-error">${misspelled}</span>${punctuation}`;
+              errorCounts.spelling++;
             } else {
-              // Create random spelling error if not in our list
-              if (wordOnly.length > 3) {
-                const pos = 1 + Math.floor(Math.random() * (wordOnly.length - 2));
-                const misspelled = wordOnly.substring(0, pos) + 
-                  wordOnly.charAt(pos + 1) + 
-                  wordOnly.charAt(pos) + 
-                  wordOnly.substring(pos + 2);
-                
-                // Preserve original capitalization
-                const preserveCase = word[0] === word[0].toUpperCase() 
-                  ? misspelled.charAt(0).toUpperCase() + misspelled.slice(1)
-                  : misspelled;
-                
-                plainResult += preserveCase + punctuation;
-                markedResult += `<span class="spelling-error">${preserveCase}</span>${punctuation}`;
-              } else {
-                plainResult += word;
-                markedResult += word;
-              }
+              plainResult += word;
+              markedResult += word;
             }
             break;
             
@@ -164,12 +228,14 @@ export const corruptText = (
               
               plainResult += wordOnly + errorPunctuation;
               markedResult += wordOnly + `<span class="punctuation-error">${errorPunctuation}</span>`;
+              errorCounts.punctuation++;
             } else if (!punctuation && Math.random() > 0.5) {
               // Add random punctuation where there was none
               const randomPunct = [",", ".", ";", ":"][Math.floor(Math.random() * 4)];
               
               plainResult += wordOnly + randomPunct;
               markedResult += wordOnly + `<span class="punctuation-error">${randomPunct}</span>`;
+              errorCounts.punctuation++;
             } else {
               plainResult += word;
               markedResult += word;
@@ -179,6 +245,7 @@ export const corruptText = (
           case 2: // Word removal
             plainResult += "";
             markedResult += `<span class="missing-text">&lt;Missing Text&gt;</span>`;
+            errorCounts.missingText++;
             break;
             
           default:
@@ -205,10 +272,16 @@ export const corruptText = (
           ? `<span class="missing-text">&lt;Missing Sentence&gt;</span> `
           : sentence + " "
       ).join("");
+      
+      errorCounts.missingText++;
     }
   }
 
-  return { plainVersion: plainResult, markedVersion: markedResult };
+  return { 
+    plainVersion: plainResult, 
+    markedVersion: markedResult,
+    errorCounts
+  };
 };
 
 // Helper function to determine which type of corruption to apply based on settings
