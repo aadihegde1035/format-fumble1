@@ -1,4 +1,3 @@
-
 // Common misspellings for frequent English words
 const commonMisspellings: Record<string, string[]> = {
   "the": ["teh", "hte", "te", "tthe"],
@@ -172,6 +171,11 @@ export const corruptText = (
     punctuation: 0,
     missingText: 0
   };
+  
+  // Get only text parts to calculate total text length for distribution curve
+  const textParts = parts.filter(part => !part.isTag);
+  const totalTextLength = textParts.reduce((sum, part) => sum + part.content.length, 0);
+  let textProcessedLength = 0;
 
   parts.forEach(part => {
     if (part.isTag) {
@@ -192,8 +196,23 @@ export const corruptText = (
           return;
         }
         
-        // Determine type of corruption based on separate settings
-        const corruptionType = determineCorruptionType(settings);
+        // Calculate position in text (0 to 1)
+        textProcessedLength += word.length;
+        const relativePosition = textProcessedLength / totalTextLength;
+        
+        // Use a bell curve distribution - fewer errors at beginning and end
+        // Formula creates higher probabilities in the middle (around 0.5) and lower at the edges (0 and 1)
+        const distributionFactor = 4 * relativePosition * (1 - relativePosition);
+        
+        // Adjust corruption settings based on position
+        const adjustedSettings = {
+          spelling: settings.spelling * distributionFactor,
+          punctuation: settings.punctuation * distributionFactor,
+          missingText: settings.missingText * distributionFactor
+        };
+        
+        // Determine type of corruption based on adjusted settings
+        const corruptionType = determineCorruptionType(adjustedSettings);
         
         // If no corruption, keep the word as is
         if (corruptionType === -1) {
@@ -261,19 +280,22 @@ export const corruptText = (
     const sentences = plainResult.split(/(?<=[.!?])\s+/);
     
     if (sentences.length > 2 && Math.random() * 100 < settings.missingText / 2) {
-      const sentenceToRemove = 1 + Math.floor(Math.random() * (sentences.length - 1));
-      
-      // Create versions with a sentence removed
-      plainResult = sentences.filter((_, i) => i !== sentenceToRemove).join(" ");
-      
-      // In marked version, replace the sentence with a missing indicator
-      markedResult = sentences.map((sentence, i) => 
-        i === sentenceToRemove 
-          ? `<span class="missing-text">&lt;Missing Sentence&gt;</span> `
-          : sentence + " "
-      ).join("");
-      
-      errorCounts.missingText++;
+      // Skip first and last sentences, only remove from middle
+      if (sentences.length > 3) {
+        const sentenceToRemove = 1 + Math.floor(Math.random() * (sentences.length - 2));
+        
+        // Create versions with a sentence removed
+        plainResult = sentences.filter((_, i) => i !== sentenceToRemove).join(" ");
+        
+        // In marked version, replace the sentence with a missing indicator
+        markedResult = sentences.map((sentence, i) => 
+          i === sentenceToRemove 
+            ? `<span class="missing-text">&lt;Missing Sentence&gt;</span> `
+            : sentence + " "
+        ).join("");
+        
+        errorCounts.missingText++;
+      }
     }
   }
 
