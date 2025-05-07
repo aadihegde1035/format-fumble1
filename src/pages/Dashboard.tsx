@@ -7,7 +7,7 @@ import {
   TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader, Search } from "lucide-react";
+import { Loader, Search, Download } from "lucide-react";
 import { toast } from "sonner";
 import { CorruptionModal } from "@/components/CorruptionModal";
 import Navigation from "@/components/Navigation";

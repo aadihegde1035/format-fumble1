@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader, Save } from 'lucide-react';
+import { Loader, Save, Download } from 'lucide-react';
 import CorruptionTool from '@/components/CorruptionTool';
 
 interface Assignment {
@@ -38,6 +38,7 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
   onComplete 
 }) => {
   const [corruptedText, setCorruptedText] = useState<string>('');
+  const [markedText, setMarkedText] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveCorruptedText = async () => {
@@ -71,6 +72,20 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
     }
   };
 
+  const downloadTextFile = (content: string, fileType: 'corrupted' | 'marked') => {
+    const studentName = assignment.user?.name || 'unknown';
+    const assignmentName = assignment.assignment?.name || 'unknown';
+    const fileName = `${studentName}-${assignmentName}-${fileType}-${new Date().toISOString().slice(0, 10)}.txt`;
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
@@ -85,19 +100,37 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
           <CorruptionTool 
             initialContent={assignment.content || ''} 
             onCorruptedTextChange={setCorruptedText}
+            onMarkedTextChange={setMarkedText}
             candidateName={assignment.user?.name || ''}
             assignmentName={assignment.assignment?.name || ''}
           />
         </div>
         
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4 flex flex-wrap gap-2 justify-end">
+          <Button 
+            variant="outline" 
+            onClick={() => downloadTextFile(corruptedText, 'corrupted')}
+            disabled={!corruptedText}
+            className="flex items-center"
+          >
+            <Download className="mr-1 h-4 w-4" />
+            Download Corrupted Text
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => downloadTextFile(markedText, 'marked')}
+            disabled={!markedText}
+            className="flex items-center"
+          >
+            <Download className="mr-1 h-4 w-4" />
+            Download Marked Text
+          </Button>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button 
             onClick={handleSaveCorruptedText} 
             disabled={!corruptedText || isSaving}
-            className="ml-2"
           >
             {isSaving ? (
               <>
