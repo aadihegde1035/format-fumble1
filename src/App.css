@@ -1,42 +1,57 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+
+/* Output container styling */
+.output-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #f8fafc;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Error styling */
+.spelling-error {
+  background-color: rgba(254, 202, 202, 0.4);
+  padding: 0 2px;
+  border-radius: 2px;
+  position: relative;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.punctuation-error {
+  background-color: rgba(186, 230, 253, 0.4);
+  padding: 0 2px;
+  border-radius: 2px;
+  position: relative;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.missing-text {
+  background-color: rgba(254, 240, 138, 0.4);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-style: italic;
+  color: #ca8a04;
 }
 
-.card {
-  padding: 2em;
+/* ReactQuill styles */
+.react-quill {
+  margin-bottom: 1rem;
 }
 
-.read-the-docs {
-  color: #888;
+.react-quill .ql-container {
+  min-height: 150px;
+  border-bottom-left-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  background-color: white;
+}
+
+.react-quill .ql-toolbar {
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+  background-color: #f8fafc;
+}
+
+.react-quill .ql-editor {
+  min-height: 150px;
+  font-size: 0.875rem;
 }
