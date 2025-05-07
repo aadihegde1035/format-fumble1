@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -132,10 +131,12 @@ const TextCorruptorTool: React.FC = () => {
           for (let i = pageCount; i > 0; i--) {
             pdf.setPage(i);
             
-            // Fix: Use a different approach to detect empty pages
-            // Check if the page has content by examining the streams in the page
-            const pageStreams = pdf.internal.pages[i];
-            const hasContent = pageStreams && typeof pageStreams === 'string' && pageStreams.length > 100; // Basic heuristic
+            // Fix: Type checking and safe access to page content
+            const pageContent = pdf.internal.pages[i];
+            // Check if pageContent exists and has content (safe access)
+            const hasContent = pageContent !== undefined && 
+                             typeof pageContent === 'string' && 
+                             pageContent.length > 100; // Basic heuristic
             
             if (i !== 1 && !hasContent) {
               pdf.deletePage(i);
