@@ -103,13 +103,12 @@ const CorruptionTool: React.FC<CorruptionToolProps> = ({
     toast.success(`${type} version copied to clipboard!`);
   };
 
-  const downloadAsPDF = async () => {
-    if (!markedOutputRef.current) return;
+  const downloadAsPDF = async (outputType: 'marked' | 'plain') => {
+    const element = outputType === 'marked' ? markedOutputRef.current : plainOutputRef.current;
+    if (!element) return;
 
     try {
       toast.info("Generating PDF...");
-      
-      const element = markedOutputRef.current;
       
       // Create PDF with A4 dimensions
       const pdf = new jsPDF({
@@ -137,8 +136,11 @@ const CorruptionTool: React.FC<CorruptionToolProps> = ({
           // Check if PDF has content
           if (pdf.internal.pages && Object.keys(pdf.internal.pages).length > 1) {
             // Save with a smaller file size (compression)
-            pdf.save('corrupted-text.pdf');
-            toast.success("PDF downloaded successfully!");
+            const fileName = outputType === 'marked' 
+              ? 'corrupted-text-marked.pdf' 
+              : 'corrupted-text-plain.pdf';
+            pdf.save(fileName);
+            toast.success(`${outputType === 'marked' ? 'Marked' : 'Plain'} PDF downloaded successfully!`);
           } else {
             toast.error("Failed to generate PDF - No content");
           }
@@ -263,9 +265,14 @@ const CorruptionTool: React.FC<CorruptionToolProps> = ({
             <TabsContent value="plain" className="mt-2">
               <div className="flex justify-between items-center mb-2">
                 <Label>Plain Output (with errors)</Label>
-                <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(plainOutput, "Plain")}>
-                  <Copy className="h-4 w-4 mr-1" /> Copy
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(plainOutput, "Plain")}>
+                    <Copy className="h-4 w-4 mr-1" /> Copy
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => downloadAsPDF('plain')}>
+                    <Download className="h-4 w-4 mr-1" /> PDF
+                  </Button>
+                </div>
               </div>
               <div 
                 ref={plainOutputRef} 
@@ -280,7 +287,7 @@ const CorruptionTool: React.FC<CorruptionToolProps> = ({
                   <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(markedOutput, "Marked")}>
                     <Copy className="h-4 w-4 mr-1" /> Copy
                   </Button>
-                  <Button variant="outline" size="sm" onClick={downloadAsPDF}>
+                  <Button variant="outline" size="sm" onClick={() => downloadAsPDF('marked')}>
                     <Download className="h-4 w-4 mr-1" /> PDF
                   </Button>
                 </div>
