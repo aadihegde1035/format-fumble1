@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -124,21 +125,21 @@ const TextCorruptorTool: React.FC = () => {
       // Use the built-in HTML renderer from jsPDF
       pdf.html(cleanedHtml, {
         callback: function(pdf) {
-          // Get page count - fix the type issue using the proper API
-          const pageCount = pdf.internal.getNumberOfPages();
+          // Get page count using the pages object length
+          const pageCount = Object.keys(pdf.internal.pages).length - 1; // -1 because pages array is 1-indexed
           
           // Check each page for content, starting from the end
           for (let i = pageCount; i > 0; i--) {
             pdf.setPage(i);
             
-            // Fix: Properly type check the page content
+            // Fix the type issue by safely accessing the page content
             const pageContent = pdf.internal.pages[i];
             
-            // Use a proper type check that doesn't depend on string length
+            // Use a safe type checking approach
             const hasContent = pageContent !== undefined && 
                              pageContent !== null &&
                              (typeof pageContent === 'object' || 
-                              (typeof pageContent === 'string' && pageContent.trim() !== ''));
+                              (typeof pageContent === 'string' && pageContent !== ''));
             
             if (i !== 1 && !hasContent) {
               pdf.deletePage(i);
