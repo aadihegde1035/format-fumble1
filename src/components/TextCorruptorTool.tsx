@@ -124,19 +124,21 @@ const TextCorruptorTool: React.FC = () => {
       // Use the built-in HTML renderer from jsPDF
       pdf.html(cleanedHtml, {
         callback: function(pdf) {
-          // Fix: Use the proper way to get page count
-          const pageCount = Object.keys(pdf.internal.pages).length - 1; // -1 because pages array is 1-indexed
+          // Get page count - fix the type issue using the proper API
+          const pageCount = pdf.internal.getNumberOfPages();
           
           // Check each page for content, starting from the end
           for (let i = pageCount; i > 0; i--) {
             pdf.setPage(i);
             
-            // Fix: Type checking and safe access to page content
+            // Fix: Properly type check the page content
             const pageContent = pdf.internal.pages[i];
-            // Check if pageContent exists and has content (safe access)
+            
+            // Use a proper type check that doesn't depend on string length
             const hasContent = pageContent !== undefined && 
-                             typeof pageContent === 'string' && 
-                             pageContent.length > 100; // Basic heuristic
+                             pageContent !== null &&
+                             (typeof pageContent === 'object' || 
+                              (typeof pageContent === 'string' && pageContent.trim() !== ''));
             
             if (i !== 1 && !hasContent) {
               pdf.deletePage(i);
