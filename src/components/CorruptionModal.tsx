@@ -49,9 +49,12 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
     setIsSaving(true);
     
     try {
+      // Only update the content field, not the last_saved field
       const { error } = await supabase
         .from('user_assignments')
-        .update({ content: corruptedText })
+        .update({ 
+          content: corruptedText 
+        })
         .eq('id', assignment.id);
       
       if (error) {

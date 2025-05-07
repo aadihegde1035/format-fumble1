@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,10 +7,12 @@ import {
   TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader } from "lucide-react";
+import { Loader, Search } from "lucide-react";
 import { toast } from "sonner";
 import { CorruptionModal } from "@/components/CorruptionModal";
 import Navigation from "@/components/Navigation";
+import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
 
 interface Assignment {
   id: string;
@@ -34,6 +37,7 @@ interface Assignment {
 const Dashboard = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [isCorruptionModalOpen, setIsCorruptionModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   const { data: assignments, isLoading, error, refetch } = useQuery({
     queryKey: ['user_assignments'],
@@ -70,6 +74,18 @@ const Dashboard = () => {
     setSelectedAssignment(null);
   };
 
+  // Format date to "DD MMM" format
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Not available';
+    return format(new Date(dateString), 'dd MMM');
+  };
+
+  // Filter assignments based on search term
+  const filteredAssignments = assignments?.filter(assignment => {
+    const studentName = assignment.user?.name?.toLowerCase() || '';
+    return studentName.includes(searchTerm.toLowerCase());
+  });
+
   if (error) {
     toast.error("Failed to load assignments");
     console.error("Error loading assignments:", error);
@@ -80,6 +96,18 @@ const Dashboard = () => {
       <Navigation />
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-6">Assignments Dashboard</h1>
+        
+        <div className="mb-4 relative">
+          <div className="flex items-center">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Input 
+              placeholder="Search by student name" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full md:max-w-xs"
+            />
+          </div>
+        </div>
         
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
@@ -102,8 +130,8 @@ const Dashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments && assignments.length > 0 ? (
-                  assignments.map((assignment) => (
+                {filteredAssignments && filteredAssignments.length > 0 ? (
+                  filteredAssignments.map((assignment) => (
                     <TableRow key={assignment.id}>
                       <TableCell>{assignment.user?.name || 'Unknown'}</TableCell>
                       <TableCell>{assignment.assignment?.name || 'Unknown'}</TableCell>
@@ -124,11 +152,11 @@ const Dashboard = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {new Date(assignment.last_saved).toLocaleDateString()}
+                        {formatDate(assignment.last_saved)}
                       </TableCell>
                       <TableCell>
                         {assignment.submitted_at 
-                          ? new Date(assignment.submitted_at).toLocaleDateString() 
+                          ? formatDate(assignment.submitted_at) 
                           : 'Not submitted'}
                       </TableCell>
                       <TableCell>
@@ -146,7 +174,7 @@ const Dashboard = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
-                      No assignments found
+                      {searchTerm ? "No assignments found with that student name" : "No assignments found"}
                     </TableCell>
                   </TableRow>
                 )}
