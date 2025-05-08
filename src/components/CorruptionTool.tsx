@@ -126,20 +126,20 @@ const CorruptionTool: React.FC<CorruptionToolProps> = ({
       
       // Clean up the HTML - remove unnecessary styling that might cause bloat
       const cleanedHtml = htmlContent
-        .replace(/style="[^"]*"/g, '') // Remove inline styles
-        .replace(/class="[^"]*"/g, '') // Remove classes
-        .replace(/<br>\s*<br>/g, '<br>'); // Remove double line breaks
+        //.replace(/style="[^"]*"/g, '') // Remove inline styles
+       // .replace(/class="[^"]*"/g, '') // Remove classes
+        //.replace(/<br>\s*<br>/g, '<br>'); // Remove double line breaks
       
       // Use the built-in HTML renderer from jsPDF
       pdf.html(cleanedHtml, {
         callback: function(pdf) {
           // Check if PDF has content
-          if (pdf.internal.pages && Object.keys(pdf.internal.pages).length > 1) {
+          if (pdf.internal.pages && Object.keys(pdf.internal.pages).length > 0) {
             // Save with a smaller file size (compression)
-            const fileName = outputType === 'marked' 
-              ? 'corrupted-text-marked.pdf' 
-              : 'corrupted-text-plain.pdf';
-            pdf.save(fileName);
+            const namePart = candidateName?.trim().replace(/\s+/g, '_') || 'Candidate';
+const assignmentPart = assignmentName?.trim().replace(/\s+/g, '_') || 'Assignment';
+const fileName = `${namePart}_${assignmentPart}.pdf`;
+pdf.save(fileName);
             toast.success(`${outputType === 'marked' ? 'Marked' : 'Plain'} PDF downloaded successfully!`);
           } else {
             toast.error("Failed to generate PDF - No content");
@@ -148,11 +148,11 @@ const CorruptionTool: React.FC<CorruptionToolProps> = ({
         x: margin,
         y: margin,
         width: pageWidth - (margin * 2), 
-        windowWidth: 1000, // Control rendering quality
+        windowWidth: 800, // Control rendering quality
         autoPaging: true,
         margin: [margin, margin, margin, margin],
         html2canvas: {
-          scale: 0.75, // Lower scale for better performance and smaller file size
+          scale: 0.21, // Lower scale for better performance and smaller file size
           useCORS: true,
           logging: false, // Disable logging to improve performance
           imageTimeout: 5000 // Shorter timeout to prevent hanging

@@ -25,14 +25,15 @@ interface Assignment {
   submitted_at: string | null;
   score: number | null;
   created_at: string | null;
-  user: {
+  regular_users: {
     name: string | null;
     email: string | null;
   } | null;
-  assignment: {
+  assignments: {
     name: string | null;
-    assignment_id: string | null;
+    id: string | null;
   } | null;
+
 }
 
 // Sample data to use if no data is returned from Supabase
@@ -91,13 +92,22 @@ const Dashboard = () => {
       console.log("Fetching assignments from Supabase...");
       try {
         const { data, error } = await supabase
-          .from('user_assignments')
-          .select(`
-            *,
-            user: regular_users(name, email),
-            assignment: assignments(name, assignment_id)
-          `)
-          .order('last_saved', { ascending: false });
+  .from('user_assignments')
+  .select(`
+    *,
+    regular_users(name, email),
+    assignments(name, id)
+  `)
+  .order('last_saved', { ascending: false });
+
+console.log("Raw data from Supabase:", data);
+
+if (error) {
+  console.error("Supabase error:", error);
+  throw new Error(error.message);
+}
+
+
         
         if (error) {
           console.error("Supabase error:", error);
@@ -154,7 +164,7 @@ const Dashboard = () => {
 
   // Filter assignments based on search term
   const filteredAssignments = assignments?.filter(assignment => {
-    const studentName = assignment.user?.name?.toLowerCase() || '';
+    const studentName = assignment.regular_users?.name?.toLowerCase() || '';
     return studentName.includes(searchTerm.toLowerCase());
   });
 
@@ -224,8 +234,8 @@ const Dashboard = () => {
                 {filteredAssignments && filteredAssignments.length > 0 ? (
                   filteredAssignments.map((assignment) => (
                     <TableRow key={assignment.id}>
-                      <TableCell>{assignment.user?.name || 'Unknown'}</TableCell>
-                      <TableCell>{assignment.assignment?.name || 'Unknown'}</TableCell>
+                      <TableCell>{assignment.regular_users?.name || 'Unknown'}</TableCell>
+                      <TableCell>{assignment.assignments?.name || 'Unknown'}</TableCell>
                       <TableCell>
                         <span className={`inline-block px-2 py-1 rounded-full text-xs ${
                           assignment.status === 'submitted' 

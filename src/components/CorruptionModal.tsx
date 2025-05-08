@@ -16,10 +16,11 @@ interface Assignment {
   assignment_id: string;
   content: string | null;
   status: string;
-  user?: {
+  regular_users: {
     name: string | null;
+
   } | null;
-  assignment?: {
+  assignments: {
     name: string | null;
   } | null;
 }
@@ -57,7 +58,9 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
           content: corruptedText 
         })
         .eq('id', assignment.id);
-      
+      console.log(assignment.id);
+      console.log('Saving content for assignment ID:', assignment.id);
+
       if (error) {
         throw error;
       }
@@ -73,8 +76,8 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
   };
 
   const downloadTextFile = (content: string, fileType: 'corrupted' | 'marked') => {
-    const studentName = assignment.user?.name || 'unknown';
-    const assignmentName = assignment.assignment?.name || 'unknown';
+    const studentName = assignment.regular_users?.name || 'unknown';
+    const assignmentName = assignment.assignments?.name || 'unknown';
     const fileName = `${studentName}-${assignmentName}-${fileType}-${new Date().toISOString().slice(0, 10)}.txt`;
     
     const blob = new Blob([content], { type: 'text/plain' });
@@ -91,8 +94,8 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            Corrupt Assignment: {assignment.assignment?.name || 'Unnamed'} 
-            {assignment.user?.name ? ` - ${assignment.user.name}` : ''}
+            Corrupt Assignment: {assignment.assignments?.name || 'Unnamed'} 
+            {assignment.regular_users?.name ? ` - ${assignment.regular_users.name}` : ''}
           </DialogTitle>
         </DialogHeader>
         
@@ -101,8 +104,8 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
             initialContent={assignment.content || ''} 
             onCorruptedTextChange={setCorruptedText}
             onMarkedTextChange={setMarkedText}
-            candidateName={assignment.user?.name || ''}
-            assignmentName={assignment.assignment?.name || ''}
+            candidateName={assignment.regular_users?.name || ''}
+            assignmentName={assignment.assignments?.name || ''}
           />
         </div>
         
