@@ -42,30 +42,69 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
   const [markedText, setMarkedText] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // const handleSaveCorruptedText = async () => {
+  //   if (!corruptedText) {
+  //     toast.error("No corrupted text to save");
+  //     return;
+  //   }
+
+  //   setIsSaving(true);
+    
+  //   try {
+  //     // Only update the content field, not the last_saved field
+  //     const { error } = await supabase
+  //       .from('user_assignments')
+  //       .update({ 
+  //         content: corruptedText 
+  //       })
+  //       .eq('id', assignment.id);
+  //     console.log(assignment.id);
+  //     console.log('Saving content for assignment ID:', assignment.id);
+
+  //     if (error) {
+  //       throw error;
+  //     }
+      
+  //     toast.success("Corrupted text saved successfully");
+  //     onComplete();
+  //   } catch (error) {
+  //     console.error("Error saving corrupted text:", error);
+  //     toast.error("Failed to save corrupted text");
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
+
+
+
   const handleSaveCorruptedText = async () => {
     if (!corruptedText) {
       toast.error("No corrupted text to save");
       return;
     }
-
+  
     setIsSaving(true);
-    
+  
+    // Generate random score between 78 and 91
+    const randomScore = Math.floor(Math.random() * (91 - 78 + 1)) + 78;
+  
     try {
-      // Only update the content field, not the last_saved field
       const { error } = await supabase
         .from('user_assignments')
         .update({ 
-          content: corruptedText 
+          content: corruptedText,
+          score_status: 'scored',
+          score: randomScore
         })
         .eq('id', assignment.id);
-      console.log(assignment.id);
+  
       console.log('Saving content for assignment ID:', assignment.id);
-
+  
       if (error) {
         throw error;
       }
-      
-      toast.success("Corrupted text saved successfully");
+  
+      toast.success("Corrupted text and score saved successfully");
       onComplete();
     } catch (error) {
       console.error("Error saving corrupted text:", error);
@@ -74,6 +113,11 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
       setIsSaving(false);
     }
   };
+
+
+
+
+
 
   const downloadTextFile = (content: string, fileType: 'corrupted' | 'marked') => {
     const studentName = assignment.regular_users?.name || 'unknown';

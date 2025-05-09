@@ -28,9 +28,9 @@ const CorruptionTool: React.FC<CorruptionToolProps> = ({
 }) => {
   const [content, setContent] = useState<string>(initialContent);
   const [corruptionSettings, setCorruptionSettings] = useState<CorruptionSettings>({
-    spelling: 30,
-    punctuation: 30,
-    missingText: 30
+    spelling: 3,
+    punctuation: 2,
+    missingText: 4
   });
   
   const [plainOutput, setPlainOutput] = useState<string>('');
