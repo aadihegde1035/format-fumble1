@@ -86,7 +86,7 @@ export const CorruptionModal: React.FC<CorruptionModalProps> = ({
     setIsSaving(true);
   
     // Generate random score between 78 and 91
-    const randomScore = Math.floor(Math.random() * (91 - 78 + 1)) + 78;
+    const randomScore = Math.floor(Math.random() * (87 - 76 + 1)) + 76;
   
     try {
       const { error } = await supabase
